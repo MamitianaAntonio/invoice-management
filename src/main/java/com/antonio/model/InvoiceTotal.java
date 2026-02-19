@@ -17,4 +17,5 @@ public class InvoiceTotal {
   private int id;
   private String customerName;
   private double total;
+  private InvoiceStatus status;
 }
