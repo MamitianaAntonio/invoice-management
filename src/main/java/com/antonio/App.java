@@ -1,9 +1,11 @@
 package com.antonio;
 
+import java.math.BigDecimal;
 import java.sql.SQLException;
 import java.util.List;
 
 import com.antonio.model.InvoiceStatusTotals;
+import com.antonio.model.InvoiceTaxSummary;
 import com.antonio.service.InvoiceService;
 import com.antonio.model.InvoiceTotal;
 
@@ -42,6 +44,18 @@ public class App {
       // Q4
       double weighted = service.computeWeightedTurnover();
       System.out.println("\nQ4 - Compute weight turnOver : " + weighted);
+
+      // Q5 - a
+      List<InvoiceTaxSummary> taxSummaries = service.findInvoiceTaxSummaries();
+      System.out.println("\nQ5-A - Invoice tax summaries :");
+      for (InvoiceTaxSummary s : taxSummaries) {
+        System.out.printf("%d | HT %.2f | TVA %.2f | TTC %.2f%n",
+            s.getInvoiceId(), s.getTotalHt(), s.getTotalTva(), s.getTotalTtc());
+      }
+
+      // Q5-B
+      BigDecimal weightedTtc = service.computeWeightedTurnoverTtc();
+      System.out.println("\nQ5-B - ComputeWeightedTurnOverTTC : " + weightedTtc);
     } catch (SQLException e) {
       e.printStackTrace();
     }
