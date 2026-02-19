@@ -9,6 +9,7 @@ import java.util.List;
 
 import com.antonio.config.DBConnection;
 import com.antonio.model.InvoiceStatus;
+import com.antonio.model.InvoiceStatusTotals;
 import com.antonio.model.InvoiceTotal;
 
 public class InvoiceService {
@@ -66,4 +67,29 @@ public class InvoiceService {
 
     return invoiceTotals;
   }
+
+  public InvoiceStatusTotals computeStatusTotals() throws SQLException {
+    String sql = """
+    SELECT 
+        SUM(CASE WHEN status = 'PAID' THEN invoice_line.quantity * invoice_line.unit_price ELSE 0 END) AS total_paid,
+        SUM(CASE WHEN status = 'CONFIRMED' THEN invoice_line.quantity * invoice_line.unit_price ELSE 0 END) AS total_confirmed,
+        SUM(CASE WHEN status = 'DRAFT' THEN invoice_line.quantity * invoice_line.unit_price ELSE 0 END) AS total_draft
+    FROM invoice
+    JOIN invoice_line ON invoice.id = invoice_line.invoice_id;
+    """;
+
+    try (Connection conn = DBConnection.getConnection();
+         PreparedStatement ps = conn.prepareStatement(sql)) {
+      ResultSet rs = ps.executeQuery();
+      if (rs.next()) {
+        return new InvoiceStatusTotals(
+            rs.getDouble("total_paid"),
+            rs.getDouble("total_confirmed"),
+            rs.getDouble("total_draft")
+        );
+      }
+    }
+    return new InvoiceStatusTotals(0, 0, 0);
+  }
+
 }
