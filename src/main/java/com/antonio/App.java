@@ -32,12 +32,16 @@ public class App {
 
       // Q3
       InvoiceStatusTotals statusTotals = service.computeStatusTotals();
-      System.out.println("Q3 - Totaux cumulés par statut :");
+      System.out.println("Q3 - Compute Status Totals :");
       System.out.printf("PAID: %.2f | CONFIRMED: %.2f | DRAFT: %.2f%n",
           statusTotals.getTotalPaid(),
           statusTotals.getTotalConfirmed(),
           statusTotals.getTotalDraft());
       }
+
+      // Q4
+      double weighted = service.computeWeightedTurnover();
+      System.out.println("\nQ4 - Compute weight turnOver : " + weighted);
     } catch (SQLException e) {
       e.printStackTrace();
     }
