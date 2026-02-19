@@ -17,6 +17,16 @@ public class App {
             invoice.getCustomerName(),
             invoice.getTotal());
       }
+
+      totals = service.findConfirmedAndPaidInvoiceTotals();
+      System.out.println("CONFIRMED and PAID invoice :");
+      for (InvoiceTotal t : totals) {
+        System.out.printf("%d | %s | %s | %.2f%n",
+            t.getId(),
+            t.getCustomerName(),
+            t.getStatus(),
+            t.getTotal());
+      }
     } catch (SQLException e) {
       e.printStackTrace();
     }
