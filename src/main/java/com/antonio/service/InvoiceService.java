@@ -1,5 +1,6 @@
 package com.antonio.service;
 
+import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -10,6 +11,7 @@ import java.util.List;
 import com.antonio.config.DBConnection;
 import com.antonio.model.InvoiceStatus;
 import com.antonio.model.InvoiceStatusTotals;
+import com.antonio.model.InvoiceTaxSummary;
 import com.antonio.model.InvoiceTotal;
 
 public class InvoiceService {
@@ -120,4 +122,70 @@ public class InvoiceService {
     return weightedTotal;
   }
 
+  public List<InvoiceTaxSummary> findInvoiceTaxSummaries() throws SQLException {
+    List<InvoiceTaxSummary> summaries = new ArrayList<>();
+    String sql = """
+            SELECT i.id,
+                   SUM(il.quantity * il.unit_price) AS ht,
+                   tc.rate AS tva_rate
+              FROM invoice i
+              JOIN invoice_line il ON i.id = il.invoice_id
+              JOIN tax_config tc ON tc.label = 'TVA STANDARD'
+          GROUP BY i.id, tc.rate
+          ORDER BY i.id;
+            """;
+
+    try (Connection conn = DBConnection.getConnection();
+         PreparedStatement ps = conn.prepareStatement(sql)) {
+      ResultSet rs = ps.executeQuery();
+      while (rs.next()) {
+        double ht = rs.getDouble("ht");
+        double tva = ht * rs.getDouble("tva_rate") / 100;
+        double ttc = ht + tva;
+
+        InvoiceTaxSummary s = new InvoiceTaxSummary();
+        s.setInvoiceId(rs.getInt("id"));
+        s.setTotalHt(ht);
+        s.setTotalTva(tva);
+        s.setTotalTtc(ttc);
+
+        summaries.add(s);
+      }
+    }
+    return summaries;
+  }
+
+  public BigDecimal computeWeightedTurnoverTtc() throws SQLException {
+    String sql = """
+            SELECT i.status, SUM(il.quantity * il.unit_price) AS total_ht, tc.rate AS tva_rate
+              FROM invoice i
+              JOIN invoice_line il ON i.id = il.invoice_id
+              JOIN tax_config tc ON tc.label = 'TVA STANDARD'
+          GROUP BY i.status, tc.rate;
+            """;
+
+    BigDecimal weightedTtc = BigDecimal.ZERO;
+
+    try (Connection conn = DBConnection.getConnection();
+         PreparedStatement ps = conn.prepareStatement(sql)) {
+      ResultSet rs = ps.executeQuery();
+      while (rs.next()) {
+        String status = rs.getString("status");
+        double totalHt = rs.getDouble("total_ht");
+        double tva = totalHt * rs.getDouble("tva_rate") / 100;
+        double ttc = totalHt + tva;
+
+        double factor = switch (status) {
+          case "PAID" -> 1.0;
+          case "CONFIRMED" -> 0.5;
+          case "DRAFT" -> 0.0;
+          default -> 0.0;
+        };
+
+        weightedTtc = weightedTtc.add(BigDecimal.valueOf(ttc * factor));
+      }
+    }
+
+    return weightedTtc;
+  }
 }
