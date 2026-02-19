@@ -92,4 +92,32 @@ public class InvoiceService {
     return new InvoiceStatusTotals(0, 0, 0);
   }
 
+  public double computeWeightedTurnover() throws SQLException {
+    String sql = """
+      SELECT status,
+             SUM(invoice_line.quantity * invoice_line.unit_price) AS total
+        FROM invoice_line
+        JOIN invoice ON invoice.id = invoice_line.invoice_id
+        GROUP BY status;
+      """;
+
+    double weightedTotal = 0;
+    try (Connection connection = DBConnection.getConnection();
+         PreparedStatement ps = connection.prepareStatement(sql)) {
+      ResultSet rs = ps.executeQuery();
+      while (rs.next()) {
+        String status = rs.getString("status");
+        double total = rs.getDouble("total");
+
+        switch (status) {
+          case "PAID" -> weightedTotal += total * 1.0;
+          case "CONFIRMED" -> weightedTotal += total * 0.5;
+          case "DRAFT" -> weightedTotal += total * 0.0;
+        }
+      }
+    }
+
+    return weightedTotal;
+  }
+
 }
